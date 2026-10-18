@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Bharat 3D Biz Scout — 100-Sector Lead & Review Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- MapLibre 3D Vector engine for zero-key 3D building extrusions -->
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    <!-- Top Navigation Command Bar -->
+    <header class="app-header">
+        <div class="brand-zone">
+            <div class="logo-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+            </div>
+            <div class="brand-text">
+                <h1>BHARAT 3D <span class="highlight">BIZ SCOUT</span></h1>
+                <span class="sub-badge">Reviewwflow 3D Edition • 100 Sectors</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <!-- Region / District Selector -->
+            <div class="control-item">
+                <label for="regionSelect">Zone / State:</label>
+                <select id="regionSelect" class="styled-select">
+                    <option value="mumbai_100" selected>📍 Mumbai (100 Sectors T1/T2/T3)</option>
+                    <option value="delhi_ncr">🏛️ Delhi NCR (64 Sectors)</option>
+                    <option value="bengaluru">💻 Bengaluru Urban (64 Sectors)</option>
+                    <option value="pune">🏢 Pune City (36 Sectors)</option>
+                    <option value="hyderabad">💎 Hyderabad (36 Sectors)</option>
+                    <option value="maharashtra">🗺️ Maharashtra State (64 Grid Zones)</option>
+                    <option value="karnataka">🗺️ Karnataka State (64 Grid Zones)</option>
+                    <option value="gujarat">🗺️ Gujarat State (64 Grid Zones)</option>
+                    <option value="tamil_nadu">🗺️ Tamil Nadu State (64 Grid Zones)</option>
+                </select>
+            </div>
+
+            <!-- Map Engine Switcher -->
+            <div class="control-item">
+                <label for="mapEngineSelect">3D Engine:</label>
+                <select id="mapEngineSelect" class="styled-select">
+                    <option value="google_3d">Google Maps 3D (Vector / Extrusions)</option>
+                    <option value="maplibre_3d">MapLibre 3D (Instant No-Key)</option>
+                </select>
+            </div>
+
+            <!-- 3D Camera Controls -->
+            <div class="camera-actions">
+                <button id="btn3DTilt" class="btn btn-action" title="Toggle 3D Pitch (62° Tilt)">
+                    <span class="icon">📐</span> 3D Tilt (62°)
+                </button>
+                <button id="btnOrbit" class="btn btn-action" title="Orbit / Rotate Camera in 3D">
+                    <span class="icon">🔄</span> Orbit 3D
+                </button>
+                <button id="btnTopDown" class="btn btn-action" title="Reset to Top-Down 2D View">
+                    <span class="icon">🧭</span> Top-Down
+                </button>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <button id="btnSettings" class="btn btn-secondary">
+                <span class="icon">⚙️</span> API Key
+            </button>
+            <button id="btnBulkExport" class="btn btn-primary">
+                <span class="icon">📥</span> Export CSV
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <main class="main-layout">
+        <!-- Left Panel: 100-Sector Grid Navigator -->
+        <aside class="left-panel">
+            <div class="panel-header">
+                <div class="title-with-pill">
+                    <h2>Sector Grid</h2>
+                    <span id="sectorCountBadge" class="badge">100 Sectors</span>
+                </div>
+                <div class="search-box">
+                    <input type="text" id="sectorSearch" placeholder="Filter Bandra, BKC, Colaba, S042...">
+                </div>
+            </div>
+
+            <!-- Tier Filter Chips -->
+            <div class="tier-chips-row">
+                <button class="tier-chip active" data-tier="all">All (100)</button>
+                <button class="tier-chip t1" data-tier="1">T1 · Premium (22)</button>
+                <button class="tier-chip t2" data-tier="2">T2 · Mid (40)</button>
+                <button class="tier-chip t3" data-tier="3">T3 (38)</button>
+            </div>
+
+            <div class="overall-progress-card">
+                <div class="progress-stats">
+                    <div>
+                        <span class="stat-number" id="scrapedSectorsCount">0</span>
+                        <span class="stat-label">Sectors Scanned</span>
+                    </div>
+                    <div>
+                        <span class="stat-number hot" id="totalHotLeadsCount">0</span>
+                        <span class="stat-label">Hot Leads Found</span>
+                    </div>
+                    <div>
+                        <span class="stat-number bought" id="totalBoughtCount">0</span>
+                        <span class="stat-label">Clients Bought 💰</span>
+                    </div>
+                </div>
+                <div class="progress-bar-bg">
+                    <div id="overallProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="sector-list-container" id="sectorListContainer">
+                <!-- Dynamically populated 100 sectors -->
+                <div class="loading-state">Loading 100 Mumbai Sectors...</div>
+            </div>
+        </aside>
+
+        <!-- Center: Interactive 3D Maps Viewport -->
+        <section class="map-viewport">
+            <div id="map" class="google-map-container"></div>
+            
+            <!-- Map HUD Overlay -->
+            <div class="map-hud-overlay">
+                <div class="hud-item" id="currentSectorHud">
+                    <span class="hud-label">SECTOR:</span>
+                    <span class="hud-value" id="hudSectorName">S001 · Bandra West</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">CAMERA:</span>
+                    <span class="hud-value" id="hudCameraMode">3D Building Extrusions (62° Tilt)</span>
+                </div>
+                <div class="hud-legend">
+                    <span class="legend-dot red"></span> ❌ No Website (Lead 100)
+                    <span class="legend-dot orange"></span> ⚠️ Crap / Broken Site
+                    <span class="legend-dot green"></span> ✅ Decent Site
+                </div>
+            </div>
+
+            <!-- Floating Quick Audit Trigger -->
+            <div class="floating-action-banner" id="floatingAuditBanner" style="display: none;">
+                <div class="banner-content">
+                    <strong id="bannerSectorTitle">S001: Bandra West</strong>
+                    <span id="bannerSectorLandmarks">Linking Rd, Pali Hill, Carter Rd</span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button id="btnTakeMeThere" class="btn btn-secondary">
+                        🧭 Take Me There
+                    </button>
+                    <button id="btnAuditActiveSector" class="btn btn-glow">
+                        ⚡ Scrape & Audit Sector
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Business Leads & Pitch Engine -->
+        <aside class="right-panel">
+            <div class="panel-header">
+                <div class="title-with-pill">
+                    <h2>Sector Businesses</h2>
+                    <span id="leadCountBadge" class="badge">0 Leads</span>
+                </div>
+                <div class="sector-subheading" id="activeSectorSubtitle">
+                    Select a sector to inspect businesses & website quality
+                </div>
+            </div>
+
+            <!-- Quick Metrics Grid -->
+            <div class="metrics-grid">
+                <div class="metric-card danger">
+                    <span class="metric-val" id="metricNoWebsite">0</span>
+                    <span class="metric-name">❌ No Website</span>
+                </div>
+                <div class="metric-card warning">
+                    <span class="metric-val" id="metricCrapWebsite">0</span>
+                    <span class="metric-name">⚠️ Crap Site</span>
+                </div>
+                <div class="metric-card success">
+                    <span class="metric-val" id="metricGoodWebsite">0</span>
+                    <span class="metric-name">✅ Decent Site</span>
+                </div>
+            </div>
+
+            <!-- Route Actions Bar -->
+            <div class="route-actions-bar">
+                <button id="btnBuildRoute" class="btn btn-action small-btn">
+                    🧭 Build 1..N Route
+                </button>
+                <button id="btnOpenGoogleMaps" class="btn btn-action small-btn">
+                    📍 Open in G-Maps
+                </button>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="filter-tabs">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="NO_WEBSITE">❌ No Website</button>
+                <button class="filter-btn" data-filter="CRAP_WEBSITE">⚠️ Crap Site</button>
+                <button class="filter-btn" data-filter="GOOD_WEBSITE">✅ Decent</button>
+            </div>
+
+            <div class="leads-list" id="leadsListContainer">
+                <div class="empty-state">
+                    <div class="empty-icon">📍</div>
+                    <h3>Select a Sector</h3>
+                    <p>Click on any 3D sector polygon on the map or select from the left list to scan all local Indian brands, audit their websites, and generate ready-to-close pitches.</p>
+                </div>
+            </div>
+
+            <div class="panel-footer" id="rightPanelFooter" style="display: none;">
+                <button id="btnExportSectorCsv" class="btn btn-secondary full-width">
+                    📥 Download Sector Leads (CSV)
+                </button>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Cold Pitch Script & WhatsApp Modal -->
+    <div class="modal-backdrop" id="pitchModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-tag">PITCH GENERATOR</span>
+                    <h3 id="pitchModalBizName">Business Pitch</h3>
+                </div>
+                <button class="modal-close-btn" id="btnClosePitchModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="pitch-meta">
+                    <div><strong>Category:</strong> <span id="pitchModalCategory">Retail</span></div>
+                    <div><strong>Phone:</strong> <span id="pitchModalPhone">+91-XXXXXXXXXX</span></div>
+                    <div><strong>Website Audit Verdict:</strong> <span id="pitchModalFlaws" class="highlight-flaw">No Website</span></div>
+                </div>
+                <div class="pitch-textarea-wrapper">
+                    <label>Personalized Cold Outreach Pitch (Email / WhatsApp):</label>
+                    <textarea id="pitchTextarea" rows="9" readonly></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnCopyPitch" class="btn btn-secondary">
+                    📋 Copy Script
+                </button>
+                <a id="btnWhatsAppDirect" href="#" target="_blank" class="btn btn-whatsapp">
+                    💬 WhatsApp Business
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Settings Modal -->
+    <div class="modal-backdrop" id="settingsModal" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Google Maps Platform Settings</h3>
+                <button class="modal-close-btn" id="btnCloseSettingsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="settings-desc">
+                    By default, this app runs everywhere (including GitHub Pages) with zero configuration using live OpenStreetMap Overpass API and MapLibre 3D extrusions. To enable Google Maps 3D vector map tiles and Places API (New):
+                </p>
+                <div class="form-group">
+                    <label for="inputGoogleApiKey">Google Maps API Key:</label>
+                    <input type="text" id="inputGoogleApiKey" placeholder="AIzaSy..." class="styled-input">
+                </div>
+                <div class="demo-key-callout">
+                    <span>💡 Prototyping? Mint a free </span>
+                    <a href="https://mapsplatform.google.com/maps-demo-key?utm_campaign=gmp_git_agentskills_v1" target="_blank" class="demo-link">
+                        Google Maps Demo Key
+                    </a>
+                    <span> with no billing setup needed.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnSaveKey" class="btn btn-primary">Save & Reload 3D Map</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <script src="sectors100.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
